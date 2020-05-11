@@ -90,6 +90,7 @@ CHAIN_HOOK(Inline)
 
 #include "y_inline_impl2"
 #include "y_inline_extra"
+#include "y_inline_extra_requests"
 
 #if defined YSI_TESTS
 	#include "..\y_hooks"

@@ -1,15 +1,4 @@
-/*+
- * <library name="y_globaltags">
- * <section>
- *  Description
- * </section>
- *  Declare GLOBAL_TAG_TYPES to define many tag types for function calls.
- * <section>
- *  Version
- * </section>
- *  0.1
- * </library>
- *//** *//*
+/*
 Legal:
 	Version: MPL 1.1
 	
@@ -81,18 +70,62 @@ Optional plugins:
 	Me - sscanf2, fixes2, Whirlpool.
 */
 
-#if defined CUSTOM_TAG_TYPES
-	#define GLOBAL_TAG_TYPES {_,Language,Bit,Text,Menu,Style,XML,Bintree,Group,Timer,File,Float,Text3D,CUSTOM_TAG_TYPES}
-#else
-	#define GLOBAL_TAG_TYPES {_,Language,Bit,Text,Menu,Style,XML,Bintree,Group,Timer,File,Float,Text3D}
+#if !defined MAX_Y_REQUESTS
+    #define MAX_Y_REQUESTS (128)
 #endif
 
-// Used to get rid of the "string:" tag once it has been used.
-#if !defined string
-	#define string:
-#endif
+static stock
+    Func:YSI_g_sRequestCallbackData[MAX_Y_REQUESTS]<iisi>,
+    Func:YSI_g_sRequestCallbackJson[MAX_Y_REQUESTS]<iii>;
 
-#if !defined void
-	#define void:
-#endif
+stock Request:Request_Inline(RequestsClient:id, const path[], E_HTTP_METHOD:method, Func:callback<iisi>, body[] = "", Headers:headers = Headers:-1)
+{
+    new Request:ret = Request(id, path, method, "OnGetRequestData", body, headers);
 
+    if (IsValidRequest(ret))
+    {
+        Indirect_Claim(callback);
+        YSI_g_sRequestCallbackData[_:ret] = callback;
+    }
+    return ret;
+}
+
+stock Request:RequestJSON_Inline(RequestsClient:id, const path[], E_HTTP_METHOD:method, Func:callback<iii>, Node:json = Node:-1, Headers:headers = Headers:-1)
+{
+    new Request:ret = RequestJSON(id, path, method, "OnGetRequestJson", json, headers);
+
+    if (IsValidRequest(ret))
+    {
+        Indirect_Claim(callback);
+        YSI_g_sRequestCallbackJson[_:ret] = callback;
+    }
+    return ret;
+}
+
+forward OnGetRequestData(Request:id, E_HTTP_STATUS:status, data[], dataLen);
+public OnGetRequestData(Request:id, E_HTTP_STATUS:status, data[], dataLen)
+{
+    new Func:callback<iisi> = YSI_g_sRequestCallbackData[_:id];
+
+    YSI_g_sRequestCallbackData[_:id] = Func:0<iisi>;
+
+    @.callback(_:id, _:status, data, dataLen);
+
+    Indirect_Release(callback);
+
+    return 0;
+}
+
+forward OnGetRequestJson(Request:id, E_HTTP_STATUS:status, Node:node);
+public OnGetRequestJson(Request:id, E_HTTP_STATUS:status, Node:node)
+{
+    new Func:callback<iii> = YSI_g_sRequestCallbackJson[_:id];
+
+    YSI_g_sRequestCallbackJson[_:id] = Func:0<iii>;
+
+    @.callback(_:id, _:status, _:node);
+
+    Indirect_Release(callback);
+
+    return 0;
+}
